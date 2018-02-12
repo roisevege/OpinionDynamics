@@ -1,4 +1,4 @@
-import networkx
+import networkx  # networkx 2.x
 
 
 class Analyzer(object):

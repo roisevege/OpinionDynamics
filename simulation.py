@@ -1,6 +1,6 @@
 
 from models import DeffuantModel
-import networkx
+import networkx  # networkx 2.x
 import os
 
 class Node(object):
