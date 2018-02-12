@@ -1,14 +1,14 @@
-import networkx  # networkx 2.x
+import networkx as nx  # networkx 2.x
 import random
 
 class DeffuantModel(object):
 
-  def __init__(self, graph, mu, d):
+  def __init__(self, graph, **kwargs):
     self.G = graph
     self.nodes = list(self.G.nodes())
     self.edges = list(self.G.edges())
-    self.mu = mu  # convergence param
-    self.d = d  # threshold
+    self.mu = kwargs['mu']  # convergence param
+    self.d = kwargs['d']  # threshold
 
   def opinionUpdate(self, select_strategy='random'):
     if select_strategy == 'random':
@@ -25,5 +25,5 @@ class DeffuantModel(object):
     if abs(o1-o2) <= self.d:
       self.G.nodes[n1]['opinion'] += self.mu*(o2-o1)
       self.G.nodes[n2]['opinion'] += self.mu*(o1-o2)
-    
+
 
