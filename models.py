@@ -9,15 +9,16 @@ class DeffuantModel(object):
     self.edges = list(self.G.edges())
     self.mu = kwargs['mu']  # convergence param
     self.d = kwargs['d']  # threshold
+    self.strategy = kwargs['strategy']
 
-  def opinionUpdate(self, select_strategy='random'):
-    if select_strategy == 'random':
+  def opinionUpdate(self):
+    if self.strategy == 'random':
       n1 = random.choice(self.nodes)
       n2 = n1
       while n2 == n1:
         n2 = random.choice(self.nodes)
 
-    elif select_strategy == 'neighbor':
+    elif self.strategy == 'neighbor':
       n1, n2 = random.choice(list(self.G.edges()))
 
     o1 = self.G.nodes[n1]['opinion']

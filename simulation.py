@@ -4,24 +4,23 @@ from models import DeffuantModel
 import networkx as nx  # networkx 2.x
 import numpy as np
 import os
+import pandas as pd
 import pickle
+import random
 from copy import deepcopy
-class Node(object):
 
-  def __init__(self, opinion):
-    # opinion can be binary, float, or a list of number.
-    self.opinion = opinion
 
 class OpinionSim(object):
 
-  def __init__(self, model, num_nodes, directory, num_edges=None, **kwargs):
+  def __init__(self, num_nodes, num_edges, directory, **kwargs):
     self.graph = None
     self.num_nodes = num_nodes
     self.num_edges = num_edges
     self.params = kwargs
+    model = kwargs['model_dict']['model']
+    self.generateGraph()
     if model == 'deffuant':
-      self.model = DeffuantModel(self.graph, kwargs)
-    self.generateGraph(kwargs)
+      self.model = DeffuantModel(self.graph, **kwargs['model_dict'])
     self.directory = directory
     os.mkdir(self.directory)
     os.mkdir(os.path.join(self.directory, 'opinion_data'))
@@ -30,11 +29,11 @@ class OpinionSim(object):
 
     # output params
     with open('%s/param' % self.directory, 'w') as fd:
-      fd.write("num_nodes:%s", self.num_nodes)
-      fd.write("num_edges:%s", self.num_edges)
-      fd.write("model:%s", model)
+      fd.write("num_nodes:%s\n" % self.num_nodes)
+      fd.write("num_edges:%s\n" % self.num_edges)
+      fd.write("model:%s\n" % model)
       for k,v in kwargs.items():
-        fd.write("%s:%s" % (k, v))
+        fd.write("%s:%s\n" % (k, v))
 
   def _connected_random_network(self, n, m):
     G = nx.gnm_random_graph(n=n,m=m)
@@ -52,7 +51,7 @@ class OpinionSim(object):
     num_node2 =  self.num_nodes - num_node1
     theor_cross_edge = 2*num_node1*num_node2/(1.0*(num_node1+num_node2)*(num_node1+num_node2-1))
     theor_cross_edge *= self.num_edges
-    cross_edges = seg * theor_cross_edge
+    cross_edges = int(seg * theor_cross_edge)
     num_edge1 = int(0.5*(self.num_edges - cross_edges))
     num_edge2 = self.num_edges - cross_edges - num_edge1
 
@@ -78,50 +77,107 @@ class OpinionSim(object):
         c2_nodes.add(node)
 
     for node in c2_nodes:
-      self.graph[node]['init_community'] = 1
+      self.graph.nodes[node]['init_community'] = 1
 
-
-
-
-  def generateGraph(self, **kwargs):
+  def generateGraph(self):
     ''' initialize self.graph
     '''
-    network_structure = kwargs['structure']
+    network_structure = self.params['structure']
     if network_structure == 'lattice2D':
-      m = math.sqrt(self.num_nodes)
+      m = int(math.sqrt(self.num_nodes))
       self.graph = nx.grid_2d_graph(m, m)
-      self.num_edges = self.graph.num_of_edges()
+      self.num_edges = self.graph.number_of_edges()
     elif network_structure == 'scaleFree':
       assert self.num_edges
-      self.graph = nx.barabasi_albert_graph(self.num_nodes, self.num_edges)
+      self.graph = nx.barabasi_albert_graph(self.num_nodes, self.params['scalefree_m'])
     elif network_structure == 'smallWorld':
       self.graph = nx.connected_watts_strogatz_graph(self.num_nodes,
                                                      self.params['k'],
                                                      self.params['p'])
-      self.num_edges = self.graph.num_of_edges()
+      self.num_edges = self.graph.number_of_edges()
     elif network_structure == 'randomNetwork':
       assert self.num_edges
       self.graph = self._connected_random_network(self.num_nodes, self.num_edges)
     elif network_structure == 'twoCommunities':
-      self._generateTwoComm(kwargs['seg'])
+      self._generateTwoComm(self.params['seg'])
     else:
       raise Exception('network is not initialized...')
 
+    for node in list(self.graph.nodes()):
+      self.graph.nodes[node]['opinion'] = np.random.uniform(0, 1.0)
+
+
+
   def simulation(self, iterations, gap):
     count = 0 
-    for i in iterations:
+    self.outputGraph(0)
+    for i in range(iterations):
       self.model.opinionUpdate()
       count += 1
       if count == gap:
-        self.outputGraph(i)
+        opinion_dict = nx.get_node_attributes(self.graph, 'opinion')
+        with open("%s/opinion_data/%s.pkl" % (self.directory, i), 'wb') as pickleFile:
+          pickle.dump(opinion_dict, pickleFile)
         count = 0
-
     self.outputGraph(iterations)
 
   def outputGraph(self, iteration):
     '''output graph with opinions'''
-    nx.write_gexf(self.graph, '%s/network_data/%s' % (self.directory,
+    nx.write_gexf(self.graph, '%s/network_data/%s.gexf' % (self.directory,
                                                       iteration))
     opinion_dict = nx.get_node_attributes(self.graph, 'opinion')
     with open("%s/opinion_data/%s.pkl" % (self.directory, iteration), 'wb') as pickleFile:
       pickle.dump(opinion_dict, pickleFile)
+
+
+model = 'deffuant'
+strategy = 'random'
+num_nodes = 400
+num_edges = 1600
+iterations = num_nodes * 50
+gap = int(0.5*num_nodes)
+mu = [0.01,0.05,0.15,0.25,0.35,0.45, 0.55]
+d = [0.05,0.1,0.2,0.4,0.5]
+
+model_dict = {"strategy": strategy, "model": model}
+for c_mu in mu:
+  now_str = pd.datetime.now().strftime('%Y%m%d%H%M%S')+'%s' % (random.randrange(10, 99))
+  data_root_dir = os.path.join('Data_' + ''.join(now_str))
+  print(data_root_dir)
+  model_dict['mu'] = c_mu
+  model_dict['d'] = d[3]
+
+  # small world
+  '''
+  p = 0.4
+  k = 4
+  structure = 'smallWorld'
+  kwargs = {'p':p, 'k':k, 'model_dict':model_dict, 'structure':structure}
+  '''
+
+  # two communities
+  '''
+  structure = 'twoCommunities'
+  seg = 0.6
+  kwargs = {'seg':seg}
+  '''
+  '''
+  # lattice2D
+  structure = 'lattice2D'
+  kwargs = {}
+  '''
+  '''
+  #  scaleFree
+  structure = 'scaleFree'
+  kwargs = {'scalefree_m':int(num_edges/num_nodes)}
+
+  '''
+  #  randomNetwork
+  structure = 'randomNetwork'
+  kwargs = {}
+
+  kwargs['model_dict'] = model_dict 
+  kwargs['structure'] = structure
+
+  simulator = OpinionSim(num_nodes, num_edges, data_root_dir, **kwargs)
+  simulator.simulation(iterations, gap)
