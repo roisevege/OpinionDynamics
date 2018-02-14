@@ -115,9 +115,9 @@ class OpinionSim(object):
       self.model.opinionUpdate()
       count += 1
       if count == gap:
-        opinion_dict = nx.get_node_attributes(self.graph, 'opinion')
-        with open("%s/opinion_data/%s.pkl" % (self.directory, i), 'wb') as pickleFile:
-          pickle.dump(opinion_dict, pickleFile)
+        opinions = list(nx.get_node_attributes(self.graph, 'opinion').values())
+        with open("%s/opinion_data/%s" % (self.directory, i), 'wb') as pickleFile:
+          pickle.dump(opinions, pickleFile)
         count = 0
     self.outputGraph(iterations)
 
@@ -125,27 +125,29 @@ class OpinionSim(object):
     '''output graph with opinions'''
     nx.write_gexf(self.graph, '%s/network_data/%s.gexf' % (self.directory,
                                                       iteration))
-    opinion_dict = nx.get_node_attributes(self.graph, 'opinion')
-    with open("%s/opinion_data/%s.pkl" % (self.directory, iteration), 'wb') as pickleFile:
-      pickle.dump(opinion_dict, pickleFile)
+    opinions = list(nx.get_node_attributes(self.graph, 'opinion').values())
+    with open("%s/opinion_data/%s" % (self.directory, iteration), 'wb') as pickleFile:
+      pickle.dump(opinions, pickleFile)
 
 
 model = 'deffuant'
-strategy = 'random'
-num_nodes = 400
-num_edges = 1600
-iterations = num_nodes * 50
+strategy = 'neighbor'
+num_nodes = 100
+num_edges = 400
+iterations = num_nodes * 100
 gap = int(0.5*num_nodes)
-mu = [0.01,0.05,0.15,0.25,0.35,0.45, 0.55]
-d = [0.05,0.1,0.2,0.4,0.5]
+mu = [0.01,0.05,0.15,0.25,0.35,0.45, 0.55]  # default: mu = 0.25
+d = [0.05,0.1,0.2,0.4,0.5]  # default: d = 0.4
 
 model_dict = {"strategy": strategy, "model": model}
-for c_mu in mu:
+for c_d in d:
+  if c_d != 0.4:
+    continue
   now_str = pd.datetime.now().strftime('%Y%m%d%H%M%S')+'%s' % (random.randrange(10, 99))
   data_root_dir = os.path.join('Data_' + ''.join(now_str))
   print(data_root_dir)
-  model_dict['mu'] = c_mu
-  model_dict['d'] = d[3]
+  model_dict['mu'] = mu[3]
+  model_dict['d'] = 0.4
 
   # small world
   '''
