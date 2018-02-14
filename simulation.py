@@ -115,7 +115,9 @@ class OpinionSim(object):
       self.model.opinionUpdate()
       count += 1
       if count == gap:
-        opinions = list(nx.get_node_attributes(self.graph, 'opinion').values())
+        opinion_dict = nx.get_node_attributes(self.graph, 'opinion')
+        ordered_node = sorted(list(opinion_dict.keys()))  # this operation is for easier analysis
+        opinions = [opinion_dict[n] for n in ordered_node]
         with open("%s/opinion_data/%s" % (self.directory, i), 'wb') as pickleFile:
           pickle.dump(opinions, pickleFile)
         count = 0
@@ -125,7 +127,9 @@ class OpinionSim(object):
     '''output graph with opinions'''
     nx.write_gexf(self.graph, '%s/network_data/%s.gexf' % (self.directory,
                                                       iteration))
-    opinions = list(nx.get_node_attributes(self.graph, 'opinion').values())
+    opinion_dict = nx.get_node_attributes(self.graph, 'opinion')
+    ordered_node = sorted(list(opinion_dict.keys()))  # this operation is for easier analysis
+    opinions = [opinion_dict[n] for n in ordered_node]
     with open("%s/opinion_data/%s" % (self.directory, iteration), 'wb') as pickleFile:
       pickle.dump(opinions, pickleFile)
 
